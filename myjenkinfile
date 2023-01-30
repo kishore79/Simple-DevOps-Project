@@ -21,7 +21,14 @@ pipeline {
                 sh "mvn clean install"
             }
         }
-  
+		stage('SonarQube analysis') {
+      steps {
+        withSonarQubeEnv('sonarqubeserver') {
+          sh "mvn -f webapp/pom.xml sonar:sonar"
+        }
+      }
+    }
+        
             // Building Docker images
     stage('Building image') {
       steps{
