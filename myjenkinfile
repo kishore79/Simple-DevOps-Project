@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+    tools {
+        maven "maven3"
+    }
+     environment {
+        imageName = "mywebnew"
+        registryCredentials = "nexus"
+        registry = "172.0.0.29:5000/"
+        dockerImage = ''
+    }
+
+    stages {
+        stage('checkout') {
+            steps {
+                checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/kishore79/hello-world']])
+            }
+        }
+        stage('Build') {
+            steps {
+                sh "mvn clean install"
+            }
+        }
+  
+            // Building Docker images
+    stage('Building image') {
+      steps{
+        script {
+          dockerImage = docker.build imageName
+        }
+      }
+    }
+
+    // Uploading Docker images into Nexus Registry
+    stage('Uploading to Nexus') {
+     steps{  
+         script {
+             docker.withRegistry( 'http://'+registry, registryCredentials ) {
+             dockerImage.push('latest')
+          }
+        }
+      }
+    }
+    stage('Deploy to EKS') {
+      steps {
+        withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'kubernetes-pass', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
+    // some block
+          sh 'kubectl apply -f regapp-deploy.yml'
+          sh 'kubectl apply -f regapp-service.yml'
+        }
+      }
+    }
+    }
+}
+node {
+    stage ('Nexus upload')  {
+        nexusArtifactUploader(
+        nexusVersion: 'nexus3',
+        protocol: 'http',
+        nexusUrl: '172.0.0.29:8081',
+        groupId: 'com.example.maven-project',
+        version: '1.0-SNAPSHOT',
+        repository: 'maven-snapshots',
+        credentialsId: 'nexus',
+        artifacts: [
+                [artifactId: 'webapp',
+             classifier: '',
+             file: 'webapp/target/webapp.war',
+             type: 'war']
+        ]
+     )
+    }
+}
