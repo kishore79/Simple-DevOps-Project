@@ -54,6 +54,7 @@ pipeline {
     // some block
           sh 'kubectl apply -f regapp-deploy.yml'
           sh 'kubectl apply -f regapp-service.yml'
+          sh 'kubectl rollout restart deployment valaxy-regapp -n default'
         }
       }
     }
