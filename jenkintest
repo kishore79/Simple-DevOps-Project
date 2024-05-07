@@ -5,6 +5,9 @@ pipeline {
             steps{
                 git credentialsId: 'git', url: 'https://github.com/kishore79/Simple-DevOps-Project'
             }
+        stage ("maven build") {
+            steps{
+                mvn clean package
         }
     }
 }
